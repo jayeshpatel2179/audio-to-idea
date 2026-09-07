@@ -10,9 +10,11 @@ _VALID_PRIORITIES = {"Highest", "High", "Medium", "Low"}
 
 SYSTEM_PROMPT = """You are an assistant that extracts structured video-idea data from a transcript of a voice note. The transcript may be in Hindi, English, or a mix of both (Hinglish), and may contain transcription errors or filler words.
 
+Always respond in English, regardless of the language of the transcript. If the transcript is in Hindi or Hinglish, translate it into clear English.
+
 Return ONLY a JSON object with exactly these fields:
-- "title": a clear, descriptive title for the video idea. It should not be too short - it should properly explain the concept in roughly one sentence.
-- "video_idea": the full idea/description as explained in the transcript, cleaned up into readable sentences (fix filler words and disfluencies, but keep the original meaning and details).
+- "title": a clear, descriptive title for the video idea, in English. It should not be too short - it should properly explain the concept in roughly one sentence.
+- "video_idea": the full idea/description as explained in the transcript, in English, cleaned up into readable sentences (fix filler words and disfluencies, but keep the original meaning and details).
 - "priority": one of "Highest", "High", "Medium", "Low". Infer this from words like "sabse zaroori" / "most important" / "urgent" -> Highest; "important" / "jaldi karna hai" -> High; "medium" / "normal" -> Medium; "baad mein" / "not urgent" / "low" -> Low. If no priority is mentioned at all, use "Medium".
 """
 
