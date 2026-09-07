@@ -1,3 +1,5 @@
+import json
+
 import gspread
 from google.oauth2.service_account import Credentials
 
@@ -7,7 +9,11 @@ _SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 HEADER = ["Title", "Video Idea", "Priority", "Status"]
 
-_creds = Credentials.from_service_account_file(config.GOOGLE_SERVICE_ACCOUNT_FILE, scopes=_SCOPES)
+if config.GOOGLE_SERVICE_ACCOUNT_JSON:
+    _service_account_info = json.loads(config.GOOGLE_SERVICE_ACCOUNT_JSON)
+    _creds = Credentials.from_service_account_info(_service_account_info, scopes=_SCOPES)
+else:
+    _creds = Credentials.from_service_account_file(config.GOOGLE_SERVICE_ACCOUNT_FILE, scopes=_SCOPES)
 _gc = gspread.authorize(_creds)
 _sheet = _gc.open_by_key(config.GOOGLE_SHEET_ID).worksheet(config.GOOGLE_SHEET_NAME)
 
