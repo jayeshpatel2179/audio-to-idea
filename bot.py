@@ -22,6 +22,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger("idea-bot")
 
+SHEET_URL = f"https://docs.google.com/spreadsheets/d/{config.GOOGLE_SHEET_ID}/edit"
+
 
 def build_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
@@ -181,7 +183,8 @@ async def handle_decision(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         context.user_data.pop("editing", None)
         await query.edit_message_text(
             f"Sheet updated with your video idea. Priority: {idea['priority']}.\n\n"
-            f"Title: {idea['title']}"
+            f"Title: {idea['title']}\n\n"
+            f"{SHEET_URL}"
         )
 
 

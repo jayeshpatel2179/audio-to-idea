@@ -13,7 +13,7 @@ SYSTEM_PROMPT = """You are an assistant that extracts structured video-idea data
 Always respond in English, regardless of the language of the transcript. If the transcript is in Hindi or Hinglish, translate it into clear English.
 
 Return ONLY a JSON object with exactly these fields:
-- "title": a clear, descriptive title for the video idea, in English. It should not be too short - it should properly explain the concept in roughly one sentence.
+- "title": the video idea title using the speaker's own words from the transcript (translated into English if needed) - do not invent a new or more "creative" title, stay as close as possible to what was actually said, just cleaned up into a short, clear sentence.
 - "video_idea": the full idea/description as explained in the transcript, in English, cleaned up into readable sentences (fix filler words and disfluencies, but keep the original meaning and details).
 - "priority": one of "Highest", "High", "Medium", "Low". Infer this from words like "sabse zaroori" / "most important" / "urgent" -> Highest; "important" / "jaldi karna hai" -> High; "medium" / "normal" -> Medium; "baad mein" / "not urgent" / "low" -> Low. If no priority is mentioned at all, use "Medium".
 """
