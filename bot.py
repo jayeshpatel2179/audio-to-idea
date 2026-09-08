@@ -12,17 +12,15 @@ from telegram.ext import (
 )
 
 import config
+from airtable_client import BASE_URL, attach_audio, create_idea
 from deepgram_stt import transcribe
 from openai_extract import VALID_PRIORITIES, extract_idea
-from sheets_client import append_idea, ensure_header
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
 logger = logging.getLogger("idea-bot")
-
-SHEET_URL = f"https://docs.google.com/spreadsheets/d/{config.GOOGLE_SHEET_ID}/edit"
 
 
 def build_keyboard() -> InlineKeyboardMarkup:
@@ -45,7 +43,7 @@ def format_preview(idea: dict) -> str:
         f"Title: {idea['title']}\n\n"
         f"Video Idea: {idea['video_idea']}\n\n"
         f"Priority: {idea['priority']}\n\n"
-        "Save this to the sheet?"
+        "Save this to Airtable?"
     )
 
 
@@ -94,6 +92,11 @@ def parse_edit(text: str, idea: dict) -> dict:
     return updated
 
 
+def _clear_pending(context: ContextTypes.DEFAULT_TYPE) -> None:
+    for key in ("pending_idea", "transcript", "editing", "audio_bytes", "audio_filename", "audio_content_type"):
+        context.user_data.pop(key, None)
+
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
         "Send me a voice note (Hindi or English) describing a video idea and its priority "
@@ -122,6 +125,9 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
         context.user_data["transcript"] = transcript
         context.user_data["pending_idea"] = idea
+        context.user_data["audio_bytes"] = audio_bytes
+        context.user_data["audio_filename"] = getattr(voice, "file_name", None) or "voice-note.ogg"
+        context.user_data["audio_content_type"] = getattr(voice, "mime_type", None) or "audio/ogg"
 
         await status_msg.edit_text(format_preview(idea), reply_markup=build_keyboard())
     except Exception:
@@ -139,9 +145,7 @@ async def handle_decision(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     transcript = context.user_data.get("transcript")
 
     if query.data == "cancel":
-        context.user_data.pop("pending_idea", None)
-        context.user_data.pop("transcript", None)
-        context.user_data.pop("editing", None)
+        _clear_pending(context)
         await query.edit_message_text("Cancelled. Nothing was saved.")
         return
 
@@ -164,8 +168,7 @@ async def handle_decision(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         except Exception:
             logger.exception("Failed to regenerate idea")
             await query.edit_message_text("Couldn't regenerate. Please send the voice note again.")
-            context.user_data.pop("pending_idea", None)
-            context.user_data.pop("transcript", None)
+            _clear_pending(context)
             return
         context.user_data["pending_idea"] = new_idea
         await query.edit_message_text(format_preview(new_idea), reply_markup=build_keyboard())
@@ -173,18 +176,29 @@ async def handle_decision(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     if query.data == "done":
         try:
-            append_idea(idea["title"], idea["video_idea"], idea["priority"])
+            record_id = create_idea(idea["title"], idea["video_idea"], idea["priority"])
         except Exception:
-            logger.exception("Failed to save idea to sheet")
-            await query.edit_message_text("Couldn't save to the sheet. Please try again.")
+            logger.exception("Failed to save idea to Airtable")
+            await query.edit_message_text("Couldn't save to Airtable. Please try again.")
             return
-        context.user_data.pop("pending_idea", None)
-        context.user_data.pop("transcript", None)
-        context.user_data.pop("editing", None)
+
+        audio_bytes = context.user_data.get("audio_bytes")
+        if audio_bytes:
+            try:
+                attach_audio(
+                    record_id,
+                    audio_bytes,
+                    filename=context.user_data.get("audio_filename", "voice-note.ogg"),
+                    content_type=context.user_data.get("audio_content_type", "audio/ogg"),
+                )
+            except Exception:
+                logger.exception("Failed to attach audio to Airtable record")
+
+        _clear_pending(context)
         await query.edit_message_text(
-            f"Sheet updated with your video idea. Priority: {idea['priority']}.\n\n"
+            f"Saved to Airtable. Priority: {idea['priority']}.\n\n"
             f"Title: {idea['title']}\n\n"
-            f"{SHEET_URL}"
+            f"{BASE_URL}"
         )
 
 
@@ -210,8 +224,6 @@ def main() -> None:
         asyncio.get_event_loop()
     except RuntimeError:
         asyncio.set_event_loop(asyncio.new_event_loop())
-
-    ensure_header()
 
     app = Application.builder().token(config.TELEGRAM_BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
