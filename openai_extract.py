@@ -6,7 +6,7 @@ import config
 
 _client = OpenAI(api_key=config.OPENAI_API_KEY)
 
-_VALID_PRIORITIES = {"Highest", "High", "Medium", "Low"}
+VALID_PRIORITIES = {"Highest", "High", "Medium", "Low"}
 
 SYSTEM_PROMPT = """You are an assistant that extracts structured video-idea data from a transcript of a voice note. The transcript may be in Hindi, English, or a mix of both (Hinglish), and may contain transcription errors or filler words.
 
@@ -32,7 +32,7 @@ def extract_idea(transcript: str) -> dict:
     data = json.loads(completion.choices[0].message.content)
 
     priority = str(data.get("priority", "Medium")).strip().title()
-    if priority not in _VALID_PRIORITIES:
+    if priority not in VALID_PRIORITIES:
         priority = "Medium"
 
     title = str(data.get("title", "")).strip() or "Untitled Video Idea"
