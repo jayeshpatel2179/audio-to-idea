@@ -226,7 +226,7 @@ def main() -> None:
     except RuntimeError:
         asyncio.set_event_loop(asyncio.new_event_loop())
 
-    persistence = PicklePersistence(filepath="bot_state.pickle")
+    persistence = PicklePersistence(filepath="bot_state.pickle", update_interval=1)
     app = Application.builder().token(config.TELEGRAM_BOT_TOKEN).persistence(persistence).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.VOICE | filters.AUDIO, handle_voice))
